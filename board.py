@@ -1,6 +1,6 @@
 class SudokuGrid:
     def __init__(self):
-        self.grille = [
+        self.grille = (
             [5, 3, 0, 0, 7, 0, 0, 0, 0],
             [6, 0, 0, 1, 9, 5, 0, 0, 0],
             [0, 9, 8, 0, 0, 0, 0, 6, 0],
@@ -10,18 +10,18 @@ class SudokuGrid:
             [0, 6, 0, 0, 0, 0, 2, 8, 0],
             [0, 0, 0, 4, 1, 9, 0, 0, 5],
             [0, 0, 0, 0, 8, 0, 0, 7, 9],
-        ]
+        )
 
     def load_files(self, file_name):
-        self.grille = []
-        self.position = []
+        self.grille = ()
+        self.position = ()
 
         with open(file_name, "r") as f:
             all_lines = f.readlines()
 
             for r, line in enumerate(all_lines):
                 # passe de ligne en ligne et nettoie
-                ligne_propre = []
+                ligne_propre = ()
                 line = line.strip()
 
                 # defini les caractères a remplacé
@@ -36,7 +36,26 @@ class SudokuGrid:
                 self.grille.append(ligne_propre)
 
 
+choix = input("Entrez le nom du fichier : ")
+
+
+chemin_complet = "grille/" + choix
+
 mon_sudoku = SudokuGrid()
-mon_sudoku.load_files("grille/sudoku.txt")
+
+
 for ligne in mon_sudoku.grille:
     print(ligne)
+
+
+# def compte_a_rebourd(n):
+#     if n <= 0:
+#         print("decollage")
+#         return
+
+#     else:
+#         print(n)
+#         compte_a_rebourd(n - 1)
+
+
+# compte_a_rebourd(3)

@@ -39,3 +39,7 @@ def memory_infos():
     print(f"RAM utilisée en Gb: {ram_usedformat} GB")
     print("RAM totale: ", ram_total1, "GB")
     print("Pourcentage d'utilisation de la RAM: ", rampourcent, "GB")
+
+
+def complexite_temporelle():
+    t(n)=
