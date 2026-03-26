@@ -1,6 +1,6 @@
 from engine import cpu_infos, memory_infos, start_timer, stop_timer
 
-# 1. Avant de commencer
+
 print("--- État initial ---")
 start_timer()
 cpu_infos()
@@ -105,7 +105,6 @@ except FileNotFoundError:
     print(f"Erreur : le fichier {chemin_complet} n'existe pas.")
 
 
-# 3. Après la résolution
 print("--- État final ---")
 stop_timer()
 cpu_infos()
