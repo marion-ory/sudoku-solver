@@ -1,6 +1,20 @@
 import psutil
 from datetime import datetime
-from pathlib import Path
+import time
+
+debut_chrono = 0
+
+
+def start_timer():
+    global debut_chrono
+    debut_chrono = time.time()
+
+
+def stop_timer():
+    fin_chrono = time.time()
+    temps_total = fin_chrono - debut_chrono
+    print(f"Temps total d'execution : {temps_total:.2f}  secondes")
+    return temps_total
 
 
 def cpu_infos():
@@ -36,5 +50,5 @@ def memory_infos():
     print("Pourcentage d'utilisation de la RAM: ", rampourcent, "GB")
 
 
-def complexite_temporelle():
-    t(n)=
+# def complexite_temporelle():
+#     T(n) = O(9^n) #9 =nombre de choix par cas n=nombre de cases vides
