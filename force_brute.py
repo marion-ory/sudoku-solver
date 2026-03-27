@@ -1,15 +1,21 @@
+def find_empty(grille):  # On remplace self par grille
+    for r in range(9):
+        for c in range(9):
+            if grille[r][c] == 0 or grille[r][c] == " ":
+                return (r, c)
+    return None
+
 
 def verifier_tout(grille):
     # Vérification des Lignes
     for ligne in grille:
-        # On vérifie qu'il y a 9 chiffres uniques et aucune case vide
-        if len(set(ligne)) != 9 or ' ' in ligne:
+        if len(set(ligne)) != 9 or 0 in ligne or " " in ligne:
             return False
 
     # Vérification des Colonnes
     for c in range(9):
         colonne = [grille[r][c] for r in range(9)]
-        if len(set(colonne)) != 9 or ' ' in colonne:
+        if len(set(colonne)) != 9 or 0 in colonne or " " in colonne:
             return False
 
     # Vérification des Blocs 3x3
@@ -19,29 +25,19 @@ def verifier_tout(grille):
             for r in range(i, i + 3):
                 for c in range(j, j + 3):
                     bloc.append(grille[r][c])
-            if len(set(bloc)) != 9 or ' ' in bloc:
+            if len(set(bloc)) != 9 or 0 in bloc or " " in bloc:
                 return False
-                
-    return True # La grille est pleine ET valide
+    return True
 
-def find_empty(grille):
-    # Cherche la première position vide (' ')
-    for r in range(9):
-        for c in range(9):
-            if grille[r][c] == ' ':
-                return (r, c)
-    return None
 
-def resoudre_force_brute(grille):
+def resoudre_force_brute(grille):  # C'est cette fonction que SudokuApp appelle
     case = find_empty(grille)
 
-    # S'il ne reste plus de case vide, on lance la grande vérification finale
+    # Check s'il reste une case vide
     if case is None:
         return verifier_tout(grille)
 
     ligne, col = case
-    
-    # Test toutes les possibilités de 1 à 9
     for num in range(1, 10):
         grille[ligne][col] = num
 
@@ -49,7 +45,6 @@ def resoudre_force_brute(grille):
         if resoudre_force_brute(grille):
             return True
 
-        # Backtrack : on remet un espace si ça mène à une impasse
-        grille[ligne][col] = ' '
-        
+        # Backtrack
+        grille[ligne][col] = 0
     return False
