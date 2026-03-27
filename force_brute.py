@@ -1,70 +1,71 @@
 import time
 
 
-def find_empty(grille):  # On remplace self par grille
+def find_empty(grille):
     for r in range(9):
         for c in range(9):
-            if grille[r][c] == 0 or grille[r][c] == " ":
+            # Harmonisation avec les types de ton app (0 ou " ")
+            if grille[r][c] in [0, " ", "", None]:
                 return (r, c)
     return None
 
 
-def verifier_tout(grille):
-    # Vérification des Lignes
-    for ligne in grille:
-        if len(set(ligne)) != 9 or 0 in ligne or " " in ligne:
+def est_valide_simple(grille, ligne, col, num):
+    # On utilise la même logique que le backtracking pour que ce soit jouable
+    for j in range(9):
+        if grille[ligne][j] == num:
             return False
-
-    # Vérification des Colonnes
-    for c in range(9):
-        colonne = [grille[r][c] for r in range(9)]
-        if len(set(colonne)) != 9 or 0 in colonne or " " in colonne:
+    for i in range(9):
+        if grille[i][col] == num:
             return False
-
-    # Vérification des Blocs 3x3
-    for i in range(0, 9, 3):
-        for j in range(0, 9, 3):
-            bloc = []
-            for r in range(i, i + 3):
-                for c in range(j, j + 3):
-                    bloc.append(grille[r][c])
-            if len(set(bloc)) != 9 or 0 in bloc or " " in bloc:
+    debut_l, debut_c = 3 * (ligne // 3), 3 * (col // 3)
+    for i in range(3):
+        for j in range(3):
+            if grille[debut_l + i][debut_c + j] == num:
                 return False
     return True
 
 
-def resoudre_force_brute(
-    grille, app=None
-):  # C'est cette fonction que SudokuApp appelle
+def resoudre_force_brute(grille, app=None):
     case = find_empty(grille)
 
-    # Check s'il reste une case vide
+    # Si plus de cases vides, on a fini
     if case is None:
-        return verifier_tout(grille)
+        return True
 
     ligne, col = case
     for num in range(1, 10):
+        # Pour que la force brute soit "visible", on pose le chiffre
         grille[ligne][col] = num
 
-        # --- VISUALISATION ---
+        # --- VISUALISATION MAC-COMPATIBLE ---
         if app:
-            # On met à jour la cellule dans l'interface
-            app.cells[(ligne, col)].delete(0, "end")
-            app.cells[(ligne, col)].insert(0, str(num))
-            app.update()  # Force l'affichage à se rafraîchir
-            time.sleep(0.01)  # Petite pause pour l'œil humain
-        # ---------------------
+            try:
+                app.cells[(ligne, col)].delete(0, "end")
+                app.cells[(ligne, col)].insert(0, str(num))
+                app.cells[(ligne, col)].configure(
+                    text_color="#e05c6a"
+                )  # Rouge pour montrer que c'est "brut"
+                app.update_idletasks()
+                app.update()
+                # On met une pause très courte, sinon c'est interminable
+                time.sleep(0.001)
+            except:
+                return False
 
-        # Appel récursif
-        if resoudre_force_brute(grille, app):
-            return True
+        # Si le chiffre est valide, on continue
+        if est_valide_simple(grille, ligne, col, num):
+            if resoudre_force_brute(grille, app):
+                return True
 
-        # Backtrack
+        # --- BACKTRACK ---
         grille[ligne][col] = 0
-
-        # --- NETTOYAGE VISUEL  l'algorithme efface un chiffre de l'interface graphique ---
         if app:
-            app.cells[(ligne, col)].delete(0, "end")
-            app.update()
-        # ------------------------
+            try:
+                app.cells[(ligne, col)].delete(0, "end")
+                app.update_idletasks()
+                app.update()
+            except:
+                pass
+
     return False
