@@ -1,3 +1,6 @@
+import time
+
+
 def find_empty(grille):  # On remplace self par grille
     for r in range(9):
         for c in range(9):
@@ -30,7 +33,9 @@ def verifier_tout(grille):
     return True
 
 
-def resoudre_force_brute(grille):  # C'est cette fonction que SudokuApp appelle
+def resoudre_force_brute(
+    grille, app=None
+):  # C'est cette fonction que SudokuApp appelle
     case = find_empty(grille)
 
     # Check s'il reste une case vide
@@ -41,10 +46,25 @@ def resoudre_force_brute(grille):  # C'est cette fonction que SudokuApp appelle
     for num in range(1, 10):
         grille[ligne][col] = num
 
+        # --- VISUALISATION ---
+        if app:
+            # On met à jour la cellule dans l'interface
+            app.cells[(ligne, col)].delete(0, "end")
+            app.cells[(ligne, col)].insert(0, str(num))
+            app.update()  # Force l'affichage à se rafraîchir
+            time.sleep(0.01)  # Petite pause pour l'œil humain
+        # ---------------------
+
         # Appel récursif
-        if resoudre_force_brute(grille):
+        if resoudre_force_brute(grille, app):
             return True
 
         # Backtrack
         grille[ligne][col] = 0
+
+        # --- NETTOYAGE VISUEL  l'algorithme efface un chiffre de l'interface graphique ---
+        if app:
+            app.cells[(ligne, col)].delete(0, "end")
+            app.update()
+        # ------------------------
     return False

@@ -1,6 +1,9 @@
 import customtkinter as ctk
 import copy
-import os  # lecture de grilles
+import os
+import threading
+import sys
+import io
 
 # Imports de tes modules
 from sudoku_engine import init_game, has_error, is_victory
@@ -8,6 +11,7 @@ from infos import start_timer, stop_timer, get_system_stats
 from backtracking import resoudre_sudoku
 from force_brute import resoudre_force_brute
 from force_brute_dichotomique import resoudre_optimise
+from complexite import comparer_fonctions
 
 # --- Palette de couleurs ---
 COLORS = {
@@ -29,7 +33,7 @@ class SudokuApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Sudoku - Édition Premium & Benchmark")
-        self.geometry("600x850")  # Fenêtre un peu plus haute pour les stats
+        self.geometry("600x850")
         self.configure(fg_color=COLORS["bg"])
         ctk.set_appearance_mode("dark")
 
@@ -66,7 +70,6 @@ class SudokuApp(ctk.CTk):
         )
         sep.pack(pady=(0, 40))
 
-        # Bouton Mode Joueur
         btn_play = ctk.CTkButton(
             menu_frame,
             text="▶ JOUER UNE PARTIE",
@@ -81,7 +84,6 @@ class SudokuApp(ctk.CTk):
         )
         btn_play.pack(fill="x", padx=50, pady=10)
 
-        # Bouton Mode Solveur
         btn_solve = ctk.CTkButton(
             menu_frame,
             text="⚙️ BENCHMARK SOLVEUR",
@@ -96,7 +98,6 @@ class SudokuApp(ctk.CTk):
         )
         btn_solve.pack(fill="x", padx=50, pady=10)
 
-        # INPUT POUR LECTURE DE GRILLE
         btn_load = ctk.CTkButton(
             menu_frame,
             text="📁 CHARGER UN FICHIER",
@@ -114,11 +115,9 @@ class SudokuApp(ctk.CTk):
     def show_file_selector(self):
         self.clear_window()
         self.build_header("MES GRILLES", "#ffcc00")
-
         scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
         scroll_frame.pack(expand=True, fill="both", padx=30, pady=20)
 
-        # On liste les fichiers dans le dossier 'pages'
         folder_path = "pages"
         if os.path.exists(folder_path):
             files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
@@ -140,7 +139,6 @@ class SudokuApp(ctk.CTk):
         path = os.path.join("pages", filename)
         with open(path, "r") as f:
             lines = f.readlines()
-
         grid = []
         fixed = []
         for line in lines[:9]:
@@ -154,48 +152,10 @@ class SudokuApp(ctk.CTk):
             grid.append(row)
             fixed_row += [False] * (9 - len(fixed_row))
             fixed.append(fixed_row)
-
         self.player_grid = grid
         self.fixed = fixed
         self.puzzle = copy.deepcopy(grid)
-        self.setup_benchmark_view()
-
-    def setup_benchmark_view(self):
-        self.clear_window()
-        self.build_header("BENCHMARK FICHIER", COLORS["info"])
-        self.build_grid_ui(is_interactive=False)
-
-        ctrl_frame = ctk.CTkFrame(self, fg_color="transparent")
-        ctrl_frame.pack(fill="x", padx=30, pady=10)
-
-        self.algo_var = ctk.StringVar(value="Backtracking Classique")
-        dropdown = ctk.CTkOptionMenu(
-            ctrl_frame,
-            variable=self.algo_var,
-            values=[
-                "Backtracking Classique",
-                "Force Brute (Lent)",
-                "MRV Optimisé (Rapide)",
-            ],
-            fg_color=COLORS["surface"],
-            button_color=COLORS["border_thin"],
-        )
-        dropdown.pack(side="left", fill="x", expand=True, padx=(0, 10))
-
-        btn_run = ctk.CTkButton(
-            ctrl_frame,
-            text="▶ RÉSOUDRE",
-            command=self.run_algorithm,
-            fg_color=COLORS["info"],
-        )
-        btn_run.pack(side="right")
-
-        self.stats_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"])
-        self.stats_frame.pack(fill="x", padx=30, pady=10)
-        self.lbl_stats = ctk.CTkLabel(
-            self.stats_frame, text="Prêt à résoudre le fichier...", font=("DM Sans", 14)
-        )
-        self.lbl_stats.pack(padx=15, pady=15)
+        self.start_solver()
 
     def build_header(self, title_text, color):
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -222,20 +182,17 @@ class SudokuApp(ctk.CTk):
             self, fg_color=COLORS["border_thick"], corner_radius=0
         )
         main_grid_frame.pack(pady=10, padx=20)
-
         for block_y in range(3):
             for block_x in range(3):
                 block_frame = ctk.CTkFrame(
                     main_grid_frame, fg_color=COLORS["border_thick"], corner_radius=0
                 )
                 block_frame.grid(row=block_y, column=block_x, padx=1.5, pady=1.5)
-
                 for cell_y in range(3):
                     for cell_x in range(3):
                         y, x = block_y * 3 + cell_y, block_x * 3 + cell_x
                         val = self.player_grid[y][x]
                         is_fixed = self.fixed[y][x]
-
                         cell = ctk.CTkEntry(
                             block_frame,
                             width=45,
@@ -248,7 +205,6 @@ class SudokuApp(ctk.CTk):
                         )
                         cell.grid(row=cell_y, column=cell_x, padx=0.5, pady=0.5)
                         self.cells[(y, x)] = cell
-
                         if is_fixed:
                             cell.insert(0, str(val))
                             cell.configure(
@@ -310,13 +266,11 @@ class SudokuApp(ctk.CTk):
             val = val[-1]
             cell.delete(0, "end")
             cell.insert(0, val)
-
         if val in "123456789":
             self.player_grid[y][x] = int(val)
         else:
             self.player_grid[y][x] = " "
             cell.delete(0, "end")
-
         self.refresh_all_colors()
         self.check_victory()
 
@@ -355,7 +309,6 @@ class SudokuApp(ctk.CTk):
         self.clear_window()
         self.solution, self.fixed, self.puzzle, self.player_grid = init_game()
         self.cells.clear()
-
         self.build_header("BENCHMARK", COLORS["info"])
         self.build_grid_ui(is_interactive=False)
 
@@ -388,9 +341,26 @@ class SudokuApp(ctk.CTk):
         self.stats_frame = ctk.CTkFrame(self, fg_color=COLORS["surface"])
         self.stats_frame.pack(fill="x", padx=30, pady=10)
         self.lbl_stats = ctk.CTkLabel(
-            self.stats_frame, text="En attente...", font=("DM Sans", 14), justify="left"
+            self.stats_frame,
+            text="En attente d'exécution...",
+            font=("DM Sans", 14),
+            justify="left",
         )
         self.lbl_stats.pack(padx=15, pady=15)
+
+        btn_complex = ctk.CTkButton(
+            self,
+            text="📊 ANALYSE DE COMPLEXITÉ SCIENTIFIQUE",
+            font=("DM Sans", 13, "bold"),
+            height=45,
+            fg_color="transparent",
+            border_width=2,
+            border_color="#9b59b6",
+            text_color="#9b59b6",
+            hover_color="#2e1a36",
+            command=self.run_complexity_analysis,
+        )
+        btn_complex.pack(fill="x", padx=30, pady=(10, 20))
 
     def run_algorithm(self):
         self.lbl_status.configure(text="Calcul...", text_color=COLORS["border_thick"])
@@ -401,7 +371,6 @@ class SudokuApp(ctk.CTk):
 
         algo = self.algo_var.get()
         grille_test = copy.deepcopy(self.puzzle)
-
         t0 = start_timer()
 
         if algo == "Backtracking Classique":
@@ -413,7 +382,6 @@ class SudokuApp(ctk.CTk):
 
         t_total = stop_timer(t0)
         system_stats = get_system_stats()
-
         self.player_grid = grille_test
         self.update_solved_grid_ui()
         self.lbl_status.configure(text="TERMINÉ", text_color=COLORS["success"])
@@ -424,6 +392,60 @@ class SudokuApp(ctk.CTk):
             f"💾 RAM : {system_stats['ram_used']} utilisés ({system_stats['ram_percent']})"
         )
         self.lbl_stats.configure(text=stats_text)
+
+    # ─── ANALYSE SCIENTIFIQUE (SUPPORT) ────────────────────────────────────────
+
+    def run_complexity_analysis(self):
+        self.complex_win = ctk.CTkToplevel(self)
+        self.complex_win.title("Analyse Scientifique - Big O")
+        self.complex_win.geometry("600x500")
+        self.complex_win.configure(fg_color=COLORS["bg"])
+        self.complex_win.attributes("-topmost", True)  # Garder au dessus
+
+        lbl = ctk.CTkLabel(
+            self.complex_win,
+            text="ANALYSE DE COMPLEXITÉ THÉORIQUE",
+            font=("DM Sans", 16, "bold"),
+            text_color="#9b59b6",
+        )
+        lbl.pack(pady=20)
+
+        self.txt_output = ctk.CTkTextbox(
+            self.complex_win, width=550, height=350, font=("Courier New", 12)
+        )
+        self.txt_output.pack(pady=10, padx=20, fill="both", expand=True)
+
+        self.txt_output.insert("end", "🚀 Démarrage du moteur d'analyse...\n")
+        self.txt_output.insert(
+            "end", "⚠️ Mesure pure (les animations sont désactivées).\n"
+        )
+        self.txt_output.insert("end", "-" * 40 + "\n")
+
+        threading.Thread(target=self._execute_complexity_logic, daemon=True).start()
+
+    def _execute_complexity_logic(self):
+        algos = {
+            "Force Brute": lambda g: resoudre_force_brute(g, app=None),
+            "Backtracking": lambda g: resoudre_sudoku(g, app=None),
+            "MRV Optimisé": lambda g: resoudre_optimise(g, app=None),
+        }
+
+        def generateur(n):
+            from sudoku_engine import init_game
+
+            _, _, _, grid = init_game()
+            return grid
+
+        buffer = io.StringIO()
+        sys.stdout = buffer
+        try:
+            comparer_fonctions(algos, generateur, tailles=[5, 10, 15], repetitions=1)
+            output_text = buffer.getvalue()
+        finally:
+            sys.stdout = sys.__stdout__
+
+        self.after(0, lambda: self.txt_output.insert("end", output_text))
+        self.after(0, lambda: self.txt_output.insert("end", "\n✅ Analyse terminée !"))
 
     def update_solved_grid_ui(self):
         for y in range(9):
