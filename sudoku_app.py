@@ -271,11 +271,21 @@ class SudokuApp(ctk.CTk):
                     self.cells[(r, c)].delete(0, "end")
         self.update()
 
+        if algo == "Force Brute (Lent)":
+            # La vraie force brute ne finit jamais : on lance dans un thread
+            self.lbl_status.configure(text="FORCE BRUTE...", text_color="#e05c6a")
+            self.lbl_stats.configure(text="⚠️ Calcul infini en cours — ne se terminera pas")
+            threading.Thread(
+                target=resoudre_force_brute,
+                args=(self.player_grid,),
+                kwargs={"fixed": self.fixed, "app": self},
+                daemon=True
+            ).start()
+            return
+
         t0 = start_timer()
         if algo == "Backtracking Classique":
             resoudre_sudoku(self.player_grid, app=self)
-        elif algo == "Force Brute (Lent)":
-            resoudre_force_brute(self.player_grid, app=self)
         elif algo == "MRV Optimisé (Rapide)":
             resoudre_optimise(self.player_grid, app=self)
 
