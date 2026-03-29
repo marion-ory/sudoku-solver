@@ -4,61 +4,60 @@ import time
 def find_empty(grille):
     for r in range(9):
         for c in range(9):
-            # Harmonisation avec les types de ton app (0 ou " ")
             if grille[r][c] in [0, " ", "", None]:
                 return (r, c)
     return None
 
 
-def est_valide_simple(grille, ligne, col, num):
-    # On utilise la même logique que le backtracking pour que ce soit jouable
-    for j in range(9):
-        if grille[ligne][j] == num:
-            return False
+def grille_valide(grille):
+    """Vérifie la grille complète uniquement à la fin."""
     for i in range(9):
-        if grille[i][col] == num:
+        ligne = [grille[i][j] for j in range(9) if grille[i][j] != 0]
+        col = [grille[j][i] for j in range(9) if grille[j][i] != 0]
+        if len(ligne) != len(set(ligne)) or len(col) != len(set(col)):
             return False
-    debut_l, debut_c = 3 * (ligne // 3), 3 * (col // 3)
-    for i in range(3):
-        for j in range(3):
-            if grille[debut_l + i][debut_c + j] == num:
+    for br in range(3):
+        for bc in range(3):
+            bloc = [
+                grille[br * 3 + r][bc * 3 + c]
+                for r in range(3) for c in range(3)
+                if grille[br * 3 + r][bc * 3 + c] != 0
+            ]
+            if len(bloc) != len(set(bloc)):
                 return False
     return True
 
 
-def resoudre_force_brute(grille, app=None):
+def resoudre_force_brute(grille, fixed=None, app=None):
+    """
+    Vraie force brute classique : aucune vérification en cours de route.
+    Essaie toutes les combinaisons (9^cases_vides), ne finit jamais en pratique.
+    """
     case = find_empty(grille)
-
-    # Si plus de cases vides, on a fini
     if case is None:
-        return True
+        return grille_valide(grille)
 
     ligne, col = case
     for num in range(1, 10):
-        # Pour que la force brute soit "visible", on pose le chiffre
         grille[ligne][col] = num
 
-        # --- VISUALISATION MAC-COMPATIBLE ---
+        # Visualisation de chaque tentative en rouge
         if app:
             try:
                 app.cells[(ligne, col)].delete(0, "end")
                 app.cells[(ligne, col)].insert(0, str(num))
-                app.cells[(ligne, col)].configure(
-                    text_color="#e05c6a"
-                )  # Rouge pour montrer que c'est "brut"
+                app.cells[(ligne, col)].configure(text_color="#e05c6a")
                 app.update_idletasks()
                 app.update()
-                # On met une pause très courte, sinon c'est interminable
                 time.sleep(0.001)
             except:
                 return False
 
-        # Si le chiffre est valide, on continue
-        if est_valide_simple(grille, ligne, col, num):
-            if resoudre_force_brute(grille, app):
-                return True
+        # Aucune vérification de validité : on descend dans tous les cas
+        if resoudre_force_brute(grille, fixed, app):
+            return True
 
-        # --- BACKTRACK ---
+        # Backtrack
         grille[ligne][col] = 0
         if app:
             try:
